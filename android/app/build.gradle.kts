@@ -4,6 +4,7 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.serialization")
+    id("org.jetbrains.kotlin.plugin.compose") version "2.0.20"
     id("com.google.devtools.ksp")
 }
 
@@ -81,10 +82,8 @@ android {
         buildConfig = true
     }
 
-    composeOptions {
-        // Compose Compiler compatible with Kotlin 2.0.20
-        kotlinCompilerExtensionVersion = "1.6.10"
-    }
+    // Compose Compiler is configured via the Kotlin Compose Compiler Gradle plugin
+    // (org.jetbrains.kotlin.plugin.compose). No composeOptions block is required with Kotlin 2.0+.
 
     packaging {
         resources {

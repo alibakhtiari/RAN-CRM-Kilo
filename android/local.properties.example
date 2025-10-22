@@ -1,0 +1,25 @@
+# local.properties.example (copy to android/local.properties)
+# Do NOT commit android/local.properties to version control.
+# Android Studio will also populate sdk.dir here automatically on first sync.
+
+# Where to get SUPABASE_URL and SUPABASE_ANON_KEY:
+# 1) Supabase Dashboard -> Settings -> API
+# 2) Project URL -> SUPABASE_URL
+# 3) anon public key -> SUPABASE_ANON_KEY
+# IMPORTANT: Do NOT use service_role key in the mobile app.
+
+# Where to get ORG_ID:
+# After running supabase/schema.sql and provisioning users (seed/snippets),
+# run: SELECT id, name FROM organizations;
+# Copy the UUID for your org and paste below.
+
+SUPABASE_URL=https://YOUR-PROJECT.supabase.co
+SUPABASE_ANON_KEY=YOUR-ANON-PUBLIC-KEY
+ORG_ID=YOUR-ORG-UUID
+DEFAULT_REGION=IR
+
+# Run guide:
+# - Open the android/ folder in Android Studio (not the repo root)
+# - Sync Gradle
+# - Ensure Run configuration uses module ":app"
+# See RUN.md for step-by-step details.

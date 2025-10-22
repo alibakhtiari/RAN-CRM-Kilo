@@ -1,0 +1,16 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="App" type="AndroidRunConfigurationType" factoryName="Android App">
+    <module name="app" />
+    <option name="DEPLOY" value="true" />
+    <option name="INSTALL" value="true" />
+    <option name="ARTIFACT_NAME" value="" />
+    <option name="PM_INSTALL_FLAGS" value="" />
+    <option name="LEAN_TEST" value="false" />
+    <option name="ACTIVITY_CLASS" value="" />
+    <option name="MODE" value="default_activity" />
+    <option name="TARGET_SELECTION_MODE" value="DEVICE_AND_SNAPSHOT_COMBO_BOX" />
+    <method v="2">
+      <option name="Android.Gradle.BeforeRunTask" enabled="true" />
+    </method>
+  </configuration>
+</component>
