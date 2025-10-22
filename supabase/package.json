@@ -1,0 +1,24 @@
+{
+  "name": "ran-crm-supabase-helper",
+  "version": "1.0.0",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "seed": "ts-node supabase/run-db-seed.ts --all",
+    "schema": "ts-node supabase/run-db-seed.ts --schema-only",
+    "seed-only": "ts-node supabase/run-db-seed.ts --seed-only",
+    "verify": "ts-node supabase/run-db-seed.ts --verify",
+    "upsert": "ts-node supabase/run-db-seed.ts --upsert-users --org \"RAN Co\""
+  },
+  "dependencies": {
+    "pg": "^8.12.0",
+    "yargs": "^17.7.2"
+  },
+  "devDependencies": {
+    "@types/node": "^24.9.1",
+    "@types/pg": "^8.15.5",
+    "@types/yargs": "^17.0.33",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.6.3"
+  }
+}
