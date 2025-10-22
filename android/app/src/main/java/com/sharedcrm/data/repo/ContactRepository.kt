@@ -4,8 +4,12 @@ import com.sharedcrm.core.PhoneNormalizer
 import com.sharedcrm.core.SupabaseConfig
 import com.sharedcrm.data.local.AppDatabase
 import com.sharedcrm.data.local.entities.ContactEntity
+import com.sharedcrm.data.remote.AuthManager
+import com.sharedcrm.data.remote.SupabaseClientProvider
+import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.time.Instant
 
 /**
  * ContactRepository
@@ -82,42 +86,70 @@ class ContactRepository(
         val dirty = contactsDao.getDirtyContacts()
         if (dirty.isEmpty()) return@withContext
 
-        // TODO: Obtain Supabase client and current user id if needed for created_by fields
-        // val client = SupabaseClientProvider.get()
-        // val postgrest = client.postgrest
+        val currentUserId = AuthManager.currentUserId()
+        if (currentUserId.isNullOrBlank()) {
+            // Not authenticated; skip pushing
+            return@withContext
+        }
+
+        val client = SupabaseClientProvider.get()
+        val postgrest = client.postgrest
 
         dirty.forEach { local ->
             try {
-                // Example pseudo-logic:
-                // val payload = mapOf(
-                //   "org_id" to SupabaseConfig.orgId,
-                //   "name" to local.name,
-                //   "phone_raw" to local.phoneRaw,
-                //   "phone_normalized" to local.phoneNormalized,
-                //   "created_by" to currentUserId
-                // )
-                //
-                // val inserted = postgrest["contacts"].insert(payload) { /* return=representation */ }
-                //
-                // After success:
-                // val serverId = inserted.id as String
-                // contactsDao.upsert(local.copy(serverId = serverId, createdAt = serverCreatedAt, updatedAt = serverUpdatedAt))
-                // contactsDao.markSynced(local.localId)
+                val createdAtIso = local.createdAt?.let { Instant.ofEpochMilli(it).toString() }
+                val updatedAtIso = local.updatedAt?.let { Instant.ofEpochMilli(it).toString() }
 
-                // Placeholder until implemented
+                val payload = buildMap {
+                    put("org_id", SupabaseConfig.orgId)
+                    put("name", local.name)
+                    put("phone_raw", local.phoneRaw)
+                    put("phone_normalized", local.phoneNormalized)
+                    put("created_by", currentUserId)
+                    if (createdAtIso != null) put("created_at", createdAtIso)
+                    if (updatedAtIso != null) put("updated_at", updatedAtIso)
+                    put("version", local.version)
+                }
+
+                // Insert explicitly to respect trigger (avoid upsert). Request representation back and decode
+                val insertedRows = postgrest["contacts"]
+                    .insert(payload, returning = io.github.jan.supabase.postgrest.Returning.REPRESENTATION)
+                    .decodeList<Map<String, Any?>>()
+
+                // Prefer representation from insert; fallback to select by unique keys if empty
+                val row = insertedRows.firstOrNull() ?: postgrest["contacts"].select(
+                    columns = "*"
+                ) {
+                    filter {
+                        eq("org_id", SupabaseConfig.orgId)
+                        eq("phone_normalized", local.phoneNormalized)
+                    }
+                    limit(1)
+                }.decodeList<Map<String, Any?>>().firstOrNull()
+
+                val serverId = row?.get("id") as? String
+                val serverCreatedAt = row?.get("created_at") as? String
+                val serverUpdatedAt = row?.get("updated_at") as? String
+
+                val serverCreatedAtEpoch = serverCreatedAt?.let { runCatching { Instant.parse(it).toEpochMilli() }.getOrNull() }
+                val serverUpdatedAtEpoch = serverUpdatedAt?.let { runCatching { Instant.parse(it).toEpochMilli() }.getOrNull() }
+
+                // Update local with serverId and mark as synced, propagating server timestamps when available
+                val updated = local.copy(
+                    serverId = serverId,
+                    createdAt = serverCreatedAtEpoch ?: local.createdAt,
+                    updatedAt = serverUpdatedAtEpoch ?: local.updatedAt
+                )
+                contactsDao.upsert(updated)
                 contactsDao.markSynced(local.localId)
             } catch (t: Throwable) {
-                // Detect duplicate-trigger error message:
-                // The DB trigger raises: "Duplicate phone exists and is older or equal; insert rejected"
                 val isDuplicateOlderWins = t.message?.contains("Duplicate phone exists and is older or equal", ignoreCase = true) == true
                 if (isDuplicateOlderWins) {
-                    // Per PRD: client should treat as duplicate and remove local newer copy (or mark conflict)
+                    // Mark conflict and remove the local newer copy per PRD (older wins)
                     contactsDao.setConflict(local.localId, "duplicate")
-                    // Optionally delete local contact:
-                    // contactsDao.delete(local)
+                    contactsDao.deleteByLocalIds(listOf(local.localId))
                 } else {
-                    // Leave dirty; a later retry/backoff will handle it
-                    // Optionally write to SyncLog (to be added)
+                    // Leave dirty for retry; could enqueue to SyncQueue with backoff
                 }
             }
         }
@@ -131,12 +163,67 @@ class ContactRepository(
      * TODO: Implement querying Postgrest with a filter updated_at > since, batch/pagination.
      */
     suspend fun pullContactsSinceLastSync(sinceEpochMillis: Long?): Long = withContext(Dispatchers.IO) {
-        // TODO: val client = SupabaseClientProvider.get()
-        // TODO: query: /contacts?org_id=eq.<org>&updated_at=gt.<since> order=updated_at.asc limit=...
-        // Map rows to ContactEntity (ensuring normalized phone), upsertAll, return max updated_at
+        val client = SupabaseClientProvider.get()
+        val postgrest = client.postgrest
 
-        // Placeholder no-op behavior
-        val now = System.currentTimeMillis()
-        now
+        val isoSince = sinceEpochMillis?.let { Instant.ofEpochMilli(it).toString() }
+
+        // Build query: filter by org_id and updated_at > since (if provided), order by updated_at asc
+        val result = postgrest["contacts"].select(columns = "*") {
+            filter {
+                eq("org_id", SupabaseConfig.orgId)
+                if (isoSince != null) {
+                    gt("updated_at", isoSince)
+                }
+            }
+            order("updated_at", ascending = true)
+            limit(500) // basic pagination cap; can loop with offsets if needed
+        }
+
+        // Decode as generic maps to avoid strict models at this stage
+        val rows = result.decodeList<Map<String, Any?>>()
+
+        if (rows.isEmpty()) {
+            return@withContext sinceEpochMillis ?: 0L
+        }
+
+        val entities = rows.mapNotNull { row ->
+            val id = row["id"] as? String
+            val name = row["name"] as? String ?: return@mapNotNull null
+            val phoneRaw = row["phone_raw"] as? String ?: return@mapNotNull null
+            val phoneNorm = row["phone_normalized"] as? String ?: return@mapNotNull null
+            val createdBy = row["created_by"] as? String
+            val updatedBy = row["updated_by"] as? String
+            val version = (row["version"] as? Number)?.toInt() ?: 1
+
+            // Parse timestamps if needed; store as epoch millis in local
+            val createdAtEpoch = (row["created_at"] as? String)?.let { runCatching { Instant.parse(it).toEpochMilli() }.getOrNull() }
+            val updatedAtEpoch = (row["updated_at"] as? String)?.let { runCatching { Instant.parse(it).toEpochMilli() }.getOrNull() }
+
+            ContactEntity(
+                serverId = id,
+                orgId = SupabaseConfig.orgId.ifBlank { null },
+                name = name,
+                phoneRaw = phoneRaw,
+                phoneNormalized = phoneNorm,
+                createdBy = createdBy,
+                createdAt = createdAtEpoch,
+                updatedBy = updatedBy,
+                updatedAt = updatedAtEpoch,
+                version = version,
+                dirty = false,
+                lastModified = updatedAtEpoch ?: System.currentTimeMillis(),
+                lastSyncedAt = System.currentTimeMillis(),
+                conflict = null
+            )
+        }
+
+        if (entities.isNotEmpty()) {
+            contactsDao.upsertAll(entities)
+        }
+
+        // Return latest updated_at epoch among rows
+        val latestIso = rows.lastOrNull()?.get("updated_at") as? String
+        latestIso?.let { runCatching { Instant.parse(it).toEpochMilli() }.getOrNull() } ?: (sinceEpochMillis ?: 0L)
     }
 }

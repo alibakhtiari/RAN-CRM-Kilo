@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.clickable
 import androidx.compose.material3.Button
 import androidx.compose.material3.Divider
 import androidx.compose.material3.MaterialTheme
@@ -50,7 +51,7 @@ import kotlinx.coroutines.flow.map
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ContactsScreen() {
+fun ContactsScreen(onOpenContact: (ContactEntity) -> Unit) {
     val context = LocalContext.current
     val db = remember { AppDatabase.get(context) }
     val dao = db.contactsDao()
@@ -128,7 +129,7 @@ fun ContactsScreen() {
 
             // Contact list
             contacts.forEach { contact ->
-                ContactRow(contact = contact)
+                ContactRow(contact = contact, onOpen = onOpenContact)
                 Divider()
             }
 
@@ -138,7 +139,7 @@ fun ContactsScreen() {
 }
 
 @Composable
-private fun ContactRow(contact: ContactEntity) {
+private fun ContactRow(contact: ContactEntity, onOpen: (ContactEntity) -> Unit) {
     val context = LocalContext.current
     val phoneDisplay = PhoneNormalizer.formatForDisplay(
         contact.phoneRaw.ifBlank { contact.phoneNormalized },
@@ -149,7 +150,8 @@ private fun ContactRow(contact: ContactEntity) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+            .padding(horizontal = 12.dp, vertical = 8.dp)
+            .clickable { onOpen(contact) },
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Text(

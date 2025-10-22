@@ -14,12 +14,14 @@ import kotlinx.coroutines.flow.Flow
 import com.sharedcrm.data.local.entities.ContactEntity
 import com.sharedcrm.data.local.entities.CallEntity
 import com.sharedcrm.data.local.entities.SyncQueueEntity
+import com.sharedcrm.data.local.entities.SyncLogEntity
 
 @Database(
     entities = [
         ContactEntity::class,
         CallEntity::class,
-        SyncQueueEntity::class
+        SyncQueueEntity::class,
+        SyncLogEntity::class
     ],
     version = 1,
     exportSchema = true
@@ -28,6 +30,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun contactsDao(): ContactsDao
     abstract fun callsDao(): CallsDao
     abstract fun syncQueueDao(): SyncQueueDao
+    abstract fun syncLogDao(): SyncLogDao
 
     companion object {
         @Volatile
@@ -116,6 +119,9 @@ interface CallsDao {
     @Query("UPDATE calls SET uploaded = 1, lastSyncedAt = :syncedAt WHERE localId = :localId")
     suspend fun markUploaded(localId: Long, syncedAt: Long = System.currentTimeMillis())
 
+    @Query("SELECT COUNT(1) FROM calls WHERE phoneNormalized = :e164 AND startTime = :startTime")
+    suspend fun existsByPhoneAndStart(e164: String, startTime: Long): Int
+
     @Delete
     suspend fun delete(entity: CallEntity)
 }
@@ -146,4 +152,23 @@ interface SyncQueueDao {
 
     @Query("SELECT COUNT(1) FROM sync_queue")
     suspend fun count(): Int
+}
+
+@Dao
+interface SyncLogDao {
+
+    @Query("SELECT * FROM sync_log ORDER BY timestamp DESC LIMIT :limit")
+    fun observeRecent(limit: Int = 100): Flow<List<SyncLogEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(entry: SyncLogEntity): Long
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(entries: List<SyncLogEntity>): List<Long>
+
+    @Query("DELETE FROM sync_log")
+    suspend fun clear()
+
+    @Query("DELETE FROM sync_log WHERE timestamp < :beforeEpoch")
+    suspend fun prune(beforeEpoch: Long)
 }
