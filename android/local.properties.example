@@ -1,0 +1,21 @@
+# --- Shared Contact CRM (Android) configuration ---
+# Copy this file to: local.properties
+# IMPORTANT: Do NOT commit local.properties to version control.
+
+# Supabase project URL (e.g., https://xxxx.supabase.co)
+SUPABASE_URL=https://YOUR_PROJECT.supabase.co
+
+# Supabase anon (public) key (NEVER service_role here)
+SUPABASE_ANON_KEY=YOUR_ANON_JWT
+
+# Single organization ID (UUID) from your Supabase database
+ORG_ID=00000000-0000-0000-0000-000000000000
+
+# Default region for phone normalization fallback (ISO 3166-1 alpha-2)
+# For Iran: IR
+DEFAULT_REGION=IR
+
+# Notes:
+# - BuildConfig fields are injected from these values via app/build.gradle.kts
+# - Ensure AndroidManifest has INTERNET/ACCESS_NETWORK_STATE permissions (already added)
+# - Admin user management is performed via Supabase Dashboard (per PRD)
