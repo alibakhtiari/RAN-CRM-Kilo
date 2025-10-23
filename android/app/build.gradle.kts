@@ -124,13 +124,16 @@ dependencies {
     // Phone number normalization
     implementation("com.googlecode.libphonenumber:libphonenumber:8.13.40")
 
-    // Supabase Kotlin client (Postgrest, Auth, Realtime)
-    implementation("io.github.jan-tennert.supabase:postgrest-kt:2.5.7")
-    implementation("io.github.jan-tennert.supabase:auth-kt:2.5.7")
-    implementation("io.github.jan-tennert.supabase:realtime-kt:2.5.7")
+    // Supabase Kotlin client (explicit published versions to avoid stale resolution)
+    implementation("io.github.jan-tennert.supabase:postgrest-kt:2.6.4")
+    implementation("io.github.jan-tennert.supabase:auth-kt:2.6.4")
+    implementation("io.github.jan-tennert.supabase:realtime-kt:2.6.4")
 
     // Serialization
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
+
+    // Ktor HTTP engine (required by supabase-kt)
+    implementation("io.ktor:ktor-client-android:2.3.12")
 
     // Coil (optional images/avatars)
     implementation("io.coil-kt:coil-compose:2.6.0")

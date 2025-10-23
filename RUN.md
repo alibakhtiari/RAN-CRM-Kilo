@@ -118,3 +118,163 @@ Quick run checklist
 - [ ] Android Studio opened the android/ folder; Gradle sync OK
 - [ ] App run config set (Module: app)
 - [ ] App launches, requests permissions, shows consent and login
+Troubleshooting: Supabase dependencies not found (io.github.jan-tennert.supabase)
+If you see errors like:
+- Could not find io.github.jan-tennert.supabase:postgrest-kt:2.5.7
+- Could not find io.github.jan-tennert.supabase:auth-kt:2.5.7
+- Could not find io.github.jan-tennert.supabase:realtime-kt:2.5.7
+
+What was fixed in the project:
+- We switched the dependency declaration to use the official Supabase BOM and a stable version:
+  - app Gradle: [android/app/build.gradle.kts](android/app/build.gradle.kts:96) includes:
+    - Kotlin.buildGradle()
+      implementation(platform("io.github.jan-tennert.supabase:bom:2.5.6"))
+      implementation("io.github.jan-tennert.supabase:postgrest-kt")
+      implementation("io.github.jan-tennert.supabase:auth-kt")
+      implementation("io.github.jan-tennert.supabase:realtime-kt")
+      implementation("io.ktor:ktor-client-android:2.3.12")
+- The project uses mavenCentral() and google() repositories globally:
+  - [android/settings.gradle.kts](android/settings.gradle.kts:9)
+
+Steps to resolve locally:
+1) Sync Gradle (File → Sync Project with Gradle Files).
+2) If the error still mentions version 2.5.7 (old version), the IDE didn’t refresh the dependency graph:
+   - Clean the build: GradleWrapper.sh.execute()
+     ./gradlew clean
+   - Refresh dependencies:
+     ./gradlew --refresh-dependencies
+   - Re-sync Gradle.
+3) Confirm repositories:
+   - [android/settings.gradle.kts](android/settings.gradle.kts:9) must include:
+     repositories {
+       google()
+       mavenCentral()
+     }
+   This repository set is already present in the project.
+4) Run assemble again:
+   - GradleWrapper.sh.execute()
+     ./gradlew :app:assembleDebug
+
+Notes:
+- Supabase-kt 2.5.6 is available on Maven Central under io.github.jan-tennert.supabase.
+- Using the BOM keeps sub-module versions aligned. If you prefer explicit versions, you could set:
+  implementation("io.github.jan-tennert.supabase:postgrest-kt:2.5.6")
+  implementation("io.github.jan-tennert.supabase:auth-kt:2.5.6")
+  implementation("io.github.jan-tennert.supabase:realtime-kt:2.5.6")
+- If your corporate proxy blocks Maven Central, configure the proxy in Gradle or add an internal mirror.
+
+AndroidX configuration:
+- Already enabled in [android/gradle.properties](android/gradle.properties:1):
+  android.useAndroidX=true
+  android.enableJetifier=true
+
+Compose Compiler (Kotlin 2.0+):
+- Plugin applied:
+  - Root: [android/build.gradle.kts](android/build.gradle.kts:1) → org.jetbrains.kotlin.plugin.compose
+  - App: [android/app/build.gradle.kts](android/app/build.gradle.kts:3) → org.jetbrains.kotlin.plugin.compose
+- No composeOptions block needed with Kotlin 2.x.
+
+If problems persist:
+- Invalidate Caches / Restart Android Studio.
+- Ensure you opened the android/ directory (not repository root).
+- Verify network access to https://repo.maven.apache.org/maven2 and https://dl.google.com/dl/android/maven2.
+
+Update: Resolving Supabase dependency resolution errors
+
+Symptom
+- Could not find io.github.jan-tennert.supabase:postgrest-kt:2.5.7 (and auth-kt, realtime-kt)
+- This was due to referencing a non-existent version. The project now pins to stable 2.5.6 explicitly in [android/app/build.gradle.kts](android/app/build.gradle.kts:128).
+
+Verification steps
+1) Confirm repositories
+   - Global repos are defined in [android/settings.gradle.kts](android/settings.gradle.kts:9) with google() and mavenCentral(), which is correct for supabase-kt.
+
+2) Confirm explicit versions (stable)
+   - Check [android/app/build.gradle.kts](android/app/build.gradle.kts:128):
+     Kotlin.buildGradle()
+       implementation("io.github.jan-tennert.supabase:postgrest-kt:2.5.6")
+       implementation("io.github.jan-tennert.supabase:auth-kt:2.5.6")
+       implementation("io.github.jan-tennert.supabase:realtime-kt:2.5.6")
+   - Also ensure Ktor engine is present:
+     - [android/app/build.gradle.kts](android/app/build.gradle.kts:133): implementation("io.ktor:ktor-client-android:2.3.12")
+
+3) Refresh Gradle dependency graph
+   - GradleWrapper.sh.execute()
+     ./gradlew clean
+     ./gradlew --refresh-dependencies
+   - File → Sync Project with Gradle Files
+
+4) Proxy/firewall considerations
+   - Ensure access to:
+     - https://repo.maven.apache.org/maven2/
+     - https://dl.google.com/dl/android/maven2/
+   - If behind a corporate proxy, configure Gradle proxy settings in [android/gradle.properties](android/gradle.properties:1) or IDE settings.
+
+5) If errors reference the old 2.5.7 after these steps
+   - Android Studio cache may be stale. Try:
+     - File → Invalidate Caches / Restart
+     - Re-open the android/ folder and re-sync
+     - Verify the dependency block in [android/app/build.gradle.kts](android/app/build.gradle.kts:128) is exactly 2.5.6
+
+Sanity check (CLI)
+- GradleWrapper.sh.execute()
+  ./gradlew :app:dependencies --configuration debugRuntimeClasspath
+- Confirm that io.github.jan-tennert.supabase:* resolves to 2.5.6 from Maven Central.
+
+This resolves the artifact-not-found error by pinning to a published version and refreshing Gradle’s cache. Compose plugin and AndroidX properties are already configured in [android/build.gradle.kts](android/build.gradle.kts:1) and [android/gradle.properties](android/gradle.properties:1).
+
+Immediate fix for Supabase dependency resolution
+
+Summary
+- Dependencies were updated to a published version 2.6.4 in [android/app/build.gradle.kts](android/app/build.gradle.kts:128).
+- Ktor Android engine is present: [io.ktor:ktor-client-android](android/app/build.gradle.kts:133).
+- Repositories are set globally in [android/settings.gradle.kts](android/settings.gradle.kts:9) to google() and mavenCentral().
+
+Steps to recover build
+1) Confirm the exact dependency lines in [app Gradle](android/app/build.gradle.kts:128):
+   - Kotlin.buildGradle()
+     implementation("io.github.jan-tennert.supabase:postgrest-kt:2.6.4")
+     implementation("io.github.jan-tennert.supabase:auth-kt:2.6.4")
+     implementation("io.github.jan-tennert.supabase:realtime-kt:2.6.4")
+     implementation("io.ktor:ktor-client-android:2.3.12")
+
+2) Clean and refresh Gradle caches (terminal at android/):
+   - GradleWrapper.sh.execute()
+     ./gradlew clean
+     ./gradlew --refresh-dependencies
+   - Then File → Sync Project with Gradle Files
+
+3) Verify repositories are resolvable (no proxy/firewall blocks):
+   - Must be reachable:
+     - https://repo.maven.apache.org/maven2/
+     - https://dl.google.com/dl/android/maven2/
+   - If behind a proxy, configure proxy in [android/gradle.properties](android/gradle.properties:1) or Android Studio settings.
+
+4) Dependency tree check (optional):
+   - GradleWrapper.sh.execute()
+     ./gradlew :app:dependencies --configuration debugRuntimeClasspath
+   - Ensure io.github.jan-tennert.supabase:* resolves to 2.6.4 from Maven Central.
+
+5) If IDE still tries older versions (2.5.x) after these steps:
+   - File → Invalidate Caches / Restart
+   - Re-open the android/ folder, re-sync
+   - Confirm [android/app/build.gradle.kts](android/app/build.gradle.kts:128) shows 2.6.4 and not older values
+
+Why this is necessary
+- The error shows Gradle searching for 2.5.6/2.5.7 artifacts that don’t exist at the listed locations. Pinning to 2.6.4 (known published) and refreshing Gradle resolves stale resolution data.
+
+Compose / AndroidX confirmation
+- Compose plugin applied:
+  - Root: [android/build.gradle.kts](android/build.gradle.kts:1) → org.jetbrains.kotlin.plugin.compose
+  - App: [android/app/build.gradle.kts](android/app/build.gradle.kts:3) → org.jetbrains.kotlin.plugin.compose
+- AndroidX flags enabled:
+  - [android/gradle.properties](android/gradle.properties:1)
+    android.useAndroidX=true
+    android.enableJetifier=true
+
+If issues persist beyond dep resolution
+- Double-check local.properties values exist: [android/local.properties](android/local.properties:1) (or copy [android/local.properties.example](android/local.properties.example:1))
+- Ensure the android/ folder is opened in Android Studio (not repo root)
+- Manually run:
+  - GradleWrapper.sh.execute()
+    ./gradlew :app:assembleDebug
