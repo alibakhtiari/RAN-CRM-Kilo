@@ -25,4 +25,25 @@ replay_pid*
 
 # Kotlin Gradle plugin data, see https://kotlinlang.org/docs/whatsnew20.html#new-directory-for-kotlin-data-in-gradle-projects
 .kotlin/
+
+# Android build outputs
+/android/.gradle/
+/android/build/
+/android/app/build/
+/android/local.properties
+/android/*.hprof
+/android/java_pid*.hprof
+
+# IDE files
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+
+# Node.js
 /supabase/node_modules
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

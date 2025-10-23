@@ -124,10 +124,13 @@ dependencies {
     // Phone number normalization
     implementation("com.googlecode.libphonenumber:libphonenumber:8.13.40")
 
-    // Supabase Kotlin client (explicit published versions to avoid stale resolution)
-    implementation("io.github.jan-tennert.supabase:postgrest-kt:2.6.4")
-    implementation("io.github.jan-tennert.supabase:auth-kt:2.6.4")
-    implementation("io.github.jan-tennert.supabase:realtime-kt:2.6.4")
+    // Supabase Kotlin client using BOM + explicit modules
+    implementation(platform("io.github.jan-tennert.supabase:bom:2.5.0"))
+    implementation("io.github.jan-tennert.supabase:gotrue-kt")
+    implementation("io.github.jan-tennert.supabase:postgrest-kt")
+    implementation("io.github.jan-tennert.supabase:storage-kt")
+    implementation("io.github.jan-tennert.supabase:realtime-kt")
+
 
     // Serialization
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
