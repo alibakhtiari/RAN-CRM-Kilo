@@ -113,18 +113,15 @@ class ContactRepository(
 
                 // Insert explicitly to respect trigger (avoid upsert). Request representation back and decode
                 val insertedRows = postgrest["contacts"]
-                    .insert(payload, returning = io.github.jan.supabase.postgrest.Returning.REPRESENTATION)
+                    .insert(payload)
                     .decodeList<Map<String, Any?>>()
 
                 // Prefer representation from insert; fallback to select by unique keys if empty
-                val row = insertedRows.firstOrNull() ?: postgrest["contacts"].select(
-                    columns = "*"
-                ) {
+                val row = insertedRows.firstOrNull() ?: postgrest["contacts"].select() {
                     filter {
                         eq("org_id", SupabaseConfig.orgId)
                         eq("phone_normalized", local.phoneNormalized)
                     }
-                    limit(1)
                 }.decodeList<Map<String, Any?>>().firstOrNull()
 
                 val serverId = row?.get("id") as? String
@@ -169,14 +166,14 @@ class ContactRepository(
         val isoSince = sinceEpochMillis?.let { Instant.ofEpochMilli(it).toString() }
 
         // Build query: filter by org_id and updated_at > since (if provided), order by updated_at asc
-        val result = postgrest["contacts"].select(columns = "*") {
+        val result = postgrest["contacts"].select() {
             filter {
                 eq("org_id", SupabaseConfig.orgId)
                 if (isoSince != null) {
                     gt("updated_at", isoSince)
                 }
             }
-            order("updated_at", ascending = true)
+            order("updated_at")
             limit(500) // basic pagination cap; can loop with offsets if needed
         }
 
