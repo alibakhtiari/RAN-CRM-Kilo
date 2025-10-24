@@ -123,17 +123,24 @@ dependencies {
     implementation(platform("io.github.jan-tennert.supabase:bom:2.6.0"))
 
     // Now implement the modules you need (the BOM will control the version)
-    implementation("io.github.jan-tennert.supabase:auth-kt")
+    // implementation("io.github.jan-tennert.supabase:auth-kt")
+    implementation("io.github.jan-tennert.supabase:gotrue-kt")
     implementation("io.github.jan-tennert.supabase:postgrest-kt")
     implementation("io.github.jan-tennert.supabase:storage-kt")
     implementation("io.github.jan-tennert.supabase:realtime-kt")
 
 
     // Serialization
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json")
+    // implementation("org.jetbrains.kotlinx:kotlinx-serialization-json")
 
     // Ktor HTTP engine (required by supabase-kt)
-    implementation("io.ktor:ktor-client-android")
+    // implementation("io.ktor:ktor-client-core")
+    // Serialization (ADD VERSION BACK)
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")
+
+    // Ktor HTTP engine (ADD VERSION BACK)
+    implementation("io.ktor:ktor-client-android:2.3.12")
+
 
     // Coil (optional images/avatars)
     implementation("io.coil-kt:coil-compose:2.7.0")
