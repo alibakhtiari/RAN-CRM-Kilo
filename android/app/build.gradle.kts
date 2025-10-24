@@ -124,11 +124,17 @@ dependencies {
     // Phone number normalization
     implementation("com.googlecode.libphonenumber:libphonenumber:8.13.40")
 
-    // Supabase Kotlin client explicit versions
-    implementation("io.github.jan-tennert.supabase:postgrest-kt:2.5.0")
-    implementation("io.github.jan-tennert.supabase:gotrue-kt:2.5.0")
-    implementation("io.github.jan-tennert.supabase:storage-kt:2.5.0")
-    implementation("io.github.jan-tennert.supabase:realtime-kt:2.5.0")
+    // Supabase Kotlin client v2
+    val supabaseVersion = "2.5.0"
+
+    // Import the Supabase Bill of Materials (BOM)
+    implementation(platform("io.github.jan-supabase:bom:$supabaseVersion"))
+
+    // Now implement the modules you need (the BOM will control the version)
+    implementation("io.github.jan-supabase:auth-kt")      // This replaces gotrue-kt and fixes all 'auth' errors
+    implementation("io.github.jan-supabase:postgrest-kt") // This fixes all database query errors
+    implementation("io.github.jan-supabase:storage-kt")
+    implementation("io.github.jan-supabase:realtime-kt")
 
 
     // Serialization
