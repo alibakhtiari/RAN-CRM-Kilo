@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.sharedcrm">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!-- Permissions per PRD -->
     <uses-permission android:name="android.permission.READ_CONTACTS" />
